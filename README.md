@@ -21,7 +21,7 @@ Before running this bot, you need to set up the following:
 1. Clone this repository:
 
     ```bash
-    git clone https://github.com/your-username/MinecraftServerNgrokIPPuller.git
+    git clone https://github.com/Michalovsky2112/MinecraftServerNgrokIPPuller.git
     cd MinecraftServerNgrokIPPuller
     ```
 
