@@ -1,11 +1,24 @@
-import discord
+import discord # type: ignore
 import requests
 import asyncio
+import logging
 import secretss
+
+
+# --- Logging Setup ---
+logging.basicConfig(
+    filename='bot.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
 
 # Set up intents for the bot
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
+
+# --- IP Cache ---
+last_sent_ip = None
 
 def get_minecraft_ngrok_address():
     try:
@@ -14,32 +27,42 @@ def get_minecraft_ngrok_address():
             "Ngrok-Version": "2"
         }
         response = requests.get("https://api.ngrok.com/endpoints", headers=headers)
-        response.raise_for_status()  # Raise error for bad HTTP status codes
-        endpoints = response.json()['endpoints']
-        for endpoint in endpoints:
+        response.raise_for_status()
+        for endpoint in response.json().get('endpoints', []):
             if endpoint['proto'] == 'tcp':
-                hostport = endpoint['hostport']
-                return f"Minecraft server address: `{hostport}`"
+                return endpoint['hostport']
     except Exception as e:
-        print(f"Failed to get ngrok address: {e}")
-    return "No ngrok TCP endpoint found."
+        logging.error(f"Error getting ngrok address: {e}")
+    return None
 
-async def send_ngrok_address():
+async def send_if_ip_changed():
+    global last_sent_ip
     await client.wait_until_ready()
-    channel = client.get_channel(secretss.CHANNEL_ID)  # Ensure CHANNEL_ID is a valid int
-    if channel:
-        msg = get_minecraft_ngrok_address()
+    channel = client.get_channel(secretss.CHANNEL_ID)
+
+    if channel is None:
+        logging.error("Channel not found.")
+        return
+
+    current_ip = get_minecraft_ngrok_address()
+    if current_ip and current_ip != last_sent_ip:
+        last_sent_ip = current_ip
+        msg = f"Updated Minecraft server address: `{current_ip}`"
         await channel.send(msg)
+        logging.info(f"Sent IP: {current_ip}")
     else:
-        print("Failed to find channel.")
+        logging.info("IP unchanged or missing.")
+
+async def hourly_loop():
+    while True:
+        await send_if_ip_changed()
+        await asyncio.sleep(3600)  # wait 1 hour
 
 @client.event
 async def on_ready():
-    print(f"Logged in as {client.user}")
-    # Send ngrok address right after bot logs in
-    await send_ngrok_address()
-    # Optionally, close the bot after sending the message
-    await client.close()
+    logging.info(f"Logged in as {client.user}")
+    client.loop.create_task(hourly_loop())
+    await send_if_ip_changed()  # Send immediately on startup
 
 client.run(secretss.TOKEN)
 
