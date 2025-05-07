@@ -2,4 +2,4 @@ discord.py
 requests
 schedule
 logging
- 
+os
