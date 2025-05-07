@@ -3,6 +3,8 @@ import requests
 import asyncio
 import logging
 import secretss
+import logging
+import os
 
 
 # --- Logging Setup ---
@@ -20,6 +22,8 @@ client = discord.Client(intents=intents)
 # --- IP Cache ---
 last_sent_ip = None
 
+IP_STORE_FILE = "last_ip.txt"
+
 def get_minecraft_ngrok_address():
     try:
         headers = {
@@ -35,23 +39,35 @@ def get_minecraft_ngrok_address():
         logging.error(f"Error getting ngrok address: {e}")
     return None
 
+def load_last_ip():
+    if os.path.exists(IP_STORE_FILE):
+        with open(IP_STORE_FILE, 'r') as f:
+            return f.read().strip()
+    return None
+
+def save_last_ip(ip):
+    with open(IP_STORE_FILE, 'w') as f:
+        f.write(ip)
+
 async def send_if_ip_changed():
-    global last_sent_ip
     await client.wait_until_ready()
     channel = client.get_channel(secretss.CHANNEL_ID)
-
-    if channel is None:
-        logging.error("Channel not found.")
+    if not channel:
+        logging.error("Failed to find channel.")
         return
 
     current_ip = get_minecraft_ngrok_address()
-    if current_ip and current_ip != last_sent_ip:
-        last_sent_ip = current_ip
-        msg = f"Updated Minecraft server address: `{current_ip}`"
-        await channel.send(msg)
-        logging.info(f"Sent IP: {current_ip}")
+    if not current_ip:
+        logging.warning("Could not fetch ngrok IP.")
+        return
+
+    last_ip = load_last_ip()
+    if current_ip != last_ip:
+        logging.info(f"IP changed: {last_ip} → {current_ip}")
+        await channel.send(f"New Minecraft server address: `{current_ip}`")
+        save_last_ip(current_ip)
     else:
-        logging.info("IP unchanged or missing.")
+        logging.info("IP unchanged. No message sent.")
 
 async def hourly_loop():
     while True:
@@ -70,4 +86,4 @@ client.run(secretss.TOKEN)
 # It uses the discord.py library to interact with Discord and the requests library to make HTTP requests to the ngrok API.
 # The bot logs in using a token and sends the ngrok address to a channel specified by its ID.
 # The bot uses the ngrok API to get the current TCP endpoint for the Minecraft server and formats it into a message.
-# The bot is designed to run indefinitely, but in this case, it closes itself after sending the message.
+
