@@ -4,9 +4,10 @@ This bot fetches the current Ngrok TCP address for a Minecraft server and sends 
 
 ## Features
 
-- Retrieves the Ngrok public URL for a Minecraft server using the Ngrok API.
-- Sends the address to a Discord channel through a bot.
-- Automatically runs on startup and sends the IP address.
+- Retrieves the Ngrok public URL for a Minecraft server using the __Ngrok API__.
+- Sends the address to a __Discord channel__ through a bot.
+- Automatically runs on __startup and every hour__, sending the IP address only if it changes.
+- Spam reduction with a __persistent cache__
 
 ## Prerequisites
 
@@ -56,6 +57,14 @@ Before running this bot, you need to set up the following:
     ```
 
 The bot will now send the Minecraft server's Ngrok address to the specified Discord channel at startup.
+
+## Bonus
+
+If you run linux, you can run the bot in a ```screen``` - if installed.
+```bash
+screen -dmS bot ./MSNIPP/bin/python3 bot.py
+```
+This will run the bot in a detached screen. To access it, execute: ```screen -r bot```. To exit while leaving running in background, press ```Ctrl + A``` and then ```Ctrl + D```.
 
 ## Contributing
 
