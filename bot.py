@@ -1,10 +1,9 @@
-import discord # type: ignore
+import discord  # type: ignore
 import requests
 import asyncio
 import logging
-import secretss
-import logging
 import os
+import yaml
 
 
 # --- Logging Setup ---
@@ -14,6 +13,12 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+# --- Load YAML Config ---
+def load_config(path="config.yaml"):
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
+config = load_config()
 
 # Set up intents for the bot
 intents = discord.Intents.default()
@@ -21,13 +26,12 @@ client = discord.Client(intents=intents)
 
 # --- IP Cache ---
 last_sent_ip = None
-
 IP_STORE_FILE = "last_ip.txt"
 
 def get_minecraft_ngrok_address():
     try:
         headers = {
-            "Authorization": f"Bearer {secretss.NGROK_API_TOKEN}",
+            "Authorization": f"Bearer {config['NGROK_API_TOKEN']}",
             "Ngrok-Version": "2"
         }
         response = requests.get("https://api.ngrok.com/endpoints", headers=headers)
@@ -51,7 +55,7 @@ def save_last_ip(ip):
 
 async def send_if_ip_changed():
     await client.wait_until_ready()
-    channel = client.get_channel(secretss.CHANNEL_ID)
+    channel = client.get_channel(config['CHANNEL_ID'])
     if not channel:
         logging.error("Failed to find channel.")
         return
@@ -80,10 +84,6 @@ async def on_ready():
     client.loop.create_task(hourly_loop())
     await send_if_ip_changed()  # Send immediately on startup
 
-client.run(secretss.TOKEN)
 
-# This code is a Discord bot that retrieves the ngrok address for a Minecraft server and sends it to a specified channel.
-# It uses the discord.py library to interact with Discord and the requests library to make HTTP requests to the ngrok API.
-# The bot logs in using a token and sends the ngrok address to a channel specified by its ID.
-# The bot uses the ngrok API to get the current TCP endpoint for the Minecraft server and formats it into a message.
-
+if __name__ == "__main__":
+    client.run(config['TOKEN'])
